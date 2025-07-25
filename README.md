@@ -1,4 +1,4 @@
-# Scrcpy-Sidebar - Android Screen Mirroring Toolkit
+# Scrcpy-Sidebar - A Sidebar Toolbox of Scrcpy
 A sidebar toolbox of Scrcpy / Scrcpy的侧边工具箱
 
 English(Current) | [中文帮助](https://github.com/CommandPrompt-Wang/Scrcpy-Sidebar/README_zh.md)
@@ -12,13 +12,12 @@ English(Current) | [中文帮助](https://github.com/CommandPrompt-Wang/Scrcpy-S
   Built-in sndcpy support (No VLC required)
   
 - 🎮 **Virtual Control Panel**  
-  - Power/Volume buttons with long-press support  
-  - Customizable layout via JSON config  
+  - Virtual buttons with long-press support  
+  - Customizable layout via GUI and JSON config  
   - Real-time updates without restart  
 
 - ⚙️ **Convenience Tools**  
-  - Keep screen awake (auto-restore settings)  
-  - Multi-device serial management  
+  - Keep screen awake (auto-restore settings)    
   - Chinese punctuation auto-correction  
 
 ## 📦 Quick Start
