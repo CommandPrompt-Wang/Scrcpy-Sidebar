@@ -1,7 +1,7 @@
 # Scrcpy-Sidebar - Android Screen Mirroring Toolkit
 A sidebar toolbox of Scrcpy / Scrcpy的侧边工具箱
 
-English(Current) | [中文帮助](https://github.com/CommandPrompt-Wang/Scrcpy-Sidebar/README_zh)
+English(Current) | [中文帮助](https://github.com/CommandPrompt-Wang/Scrcpy-Sidebar/README_zh.md)
 
 <img width="960" height="476" alt="{CAB404BA-A61F-41F2-927D-6A540DBADB36}" src="https://github.com/user-attachments/assets/c0a94813-3de1-4cec-abfc-e94322254405" />
 
