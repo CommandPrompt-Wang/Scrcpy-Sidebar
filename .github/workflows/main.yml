@@ -1,0 +1,88 @@
+name: Multi-Platform Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        platform: [
+          windows-x86, windows-x64,
+          linux-x86, linux-x64, linux-arm,
+          macos-x64, macos-arm
+        ]
+      fail-fast: false
+
+    runs-on: ${{ 
+      contains(matrix.platform, 'windows') && 'windows-latest' ||
+      contains(matrix.platform, 'linux') && 'ubuntu-latest' ||
+      contains(matrix.platform, 'macos') && 'macos-latest'
+    }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v3
+        with:
+          version: '6.9.4'
+          host: ${{ 
+            contains(matrix.platform, 'windows') && 'windows' ||
+            contains(matrix.platform, 'linux') && 'linux' ||
+            contains(matrix.platform, 'macos') && 'macos'
+          }}
+          target: ${{ 
+            matrix.platform == 'windows-x86' && 'win32_msvc2019' ||
+            matrix.platform == 'windows-x64' && 'desktop' ||
+            matrix.platform == 'linux-x86' && 'linux' ||
+            matrix.platform == 'linux-x64' && 'linux' ||
+            matrix.platform == 'linux-arm' && 'linux-arm64-gnu' ||
+            matrix.platform == 'macos-x64' && 'clang_64' ||
+            matrix.platform == 'macos-arm' && 'clang_arm64'
+          }}
+          arch: ${{ 
+            matrix.platform == 'windows-x86' && 'win32_msvc2019' || 
+            matrix.platform == 'windows-x64' && 'x86_64' ||
+            matrix.platform == 'linux-x86' && 'x86' ||
+            matrix.platform == 'linux-x64' && 'x86_64' ||
+            matrix.platform == 'linux-arm' && 'arm64' ||
+            matrix.platform == 'macos-x64' && 'x86_64' ||
+            matrix.platform == 'macos-arm' && 'arm64'
+          }}
+
+      - name: Prepare Linux ARM Toolchain
+        if: matrix.platform == 'linux-arm'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+
+      - name: Configure and Build
+        run: |
+          qmake Scrcpy-Sidebar.pro
+          if [[ "${{ matrix.platform }}" =~ "windows" ]]; then
+            nmake release
+          elif [[ "${{ matrix.platform }}" == "linux-arm" ]]; then
+            make -j2 CC=aarch64-linux-gnu-gcc CXX=aarch64-linux-gnu-g++
+          else
+            make -j2
+          fi
+
+      - name: Package Artifacts
+        run: |
+          mkdir -p dist
+          if [[ "${{ matrix.platform }}" =~ "windows" ]]; then
+            cp release/*.exe dist/
+          else
+            cp Scrcpy-Sidebar dist/
+          fi
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ matrix.platform }}-build
+          path: dist/*
