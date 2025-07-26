@@ -3,6 +3,7 @@
 [English](README.md) | 中文(当前)
 
 <img width="960" height="476" alt="{CAB404BA-A61F-41F2-927D-6A540DBADB36}" src="https://github.com/user-attachments/assets/c0a94813-3de1-4cec-abfc-e94322254405" />
+[实机演示](https://www.bilibili.com/video/BV1cibXz6E3M)
 
 **为 scrcpy 添加音频转发和虚拟按键功能！**
 
@@ -66,7 +67,11 @@
 ```bash
     vlc -Idummy --demux rawaud --network-caching=0 --play-and-exit tcl://localhost:28200   #如果未更改默认端口号
 ``` 
-详见 [Sndcpy 文档](https://github.com/rom1v/sndcpy?tab=readme-ov-file#requirements)
+  详见 [Sndcpy 文档](https://github.com/rom1v/sndcpy?tab=readme-ov-file#requirements)
+
+- 如果操作过快（主要是连接sndcpy服务），Scrcpy-Sidebar会冻结。这是因为我没写互斥锁。
+- 如果操作过快，Scrcpy-Sidebar会忽略某些操作（尽管UI上面看似接受了）。因为`EneternalProcess`我写的是单例的。
+- 以上的bug我会尽快解决。
 
 ## 📄 开源协议
 LGPL-3.0 | © Command_Prompt
