@@ -5,16 +5,6 @@ on:
     inputs:
       platform:
         description: "Target platform"
-        required: true
-        type: choice
-        options:
-          - windows-x86
-          - windows-x64
-          - linux-x86
-          - linux-x64
-          - linux-arm
-          - macos-x64
-          - macos-arm
     branches: [main]
 
 jobs:
@@ -88,7 +78,7 @@ jobs:
           fi
 
       - name: Upload Artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.platform }}-build
           path: dist/
