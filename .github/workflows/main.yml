@@ -1,9 +1,20 @@
 name: Multi-Platform Build
 
 on:
-  push:
-    branches: [main]
-  pull_request:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: "Target platform"
+        required: true
+        type: choice
+        options:
+          - windows-x86
+          - windows-x64
+          - linux-x86
+          - linux-x64
+          - linux-arm
+          - macos-x64
+          - macos-arm
     branches: [main]
 
 jobs:
@@ -20,8 +31,7 @@ jobs:
     runs-on: ${{ 
       contains(matrix.platform, 'windows') && 'windows-latest' ||
       contains(matrix.platform, 'linux') && 'ubuntu-latest' ||
-      contains(matrix.platform, 'macos') && 'macos-latest'
-    }}
+      contains(matrix.platform, 'macos') && 'macos-latest' }}
 
     steps:
       - name: Checkout code
@@ -30,53 +40,49 @@ jobs:
       - name: Install Qt
         uses: jurplel/install-qt-action@v3
         with:
-          version: '6.9.4'
+          version: "6.9.4"
           host: ${{ 
             contains(matrix.platform, 'windows') && 'windows' ||
             contains(matrix.platform, 'linux') && 'linux' ||
-            contains(matrix.platform, 'macos') && 'macos'
-          }}
+            contains(matrix.platform, 'macos') && 'macos' }}
           target: ${{ 
-            matrix.platform == 'windows-x86' && 'win32_msvc2019' ||
-            matrix.platform == 'windows-x64' && 'desktop' ||
-            matrix.platform == 'linux-x86' && 'linux' ||
-            matrix.platform == 'linux-x64' && 'linux' ||
+            matrix.platform == 'windows-x86' && 'win32_msvc2022' ||
+            matrix.platform == 'windows-x64' && 'win64_msvc2022_64' ||
+            matrix.platform == 'linux-x86' && 'linux-g++-32' ||
+            matrix.platform == 'linux-x64' && 'gcc_64' ||
             matrix.platform == 'linux-arm' && 'linux-arm64-gnu' ||
             matrix.platform == 'macos-x64' && 'clang_64' ||
-            matrix.platform == 'macos-arm' && 'clang_arm64'
-          }}
-          arch: ${{ 
-            matrix.platform == 'windows-x86' && 'win32_msvc2019' || 
-            matrix.platform == 'windows-x64' && 'x86_64' ||
-            matrix.platform == 'linux-x86' && 'x86' ||
-            matrix.platform == 'linux-x64' && 'x86_64' ||
-            matrix.platform == 'linux-arm' && 'arm64' ||
-            matrix.platform == 'macos-x64' && 'x86_64' ||
-            matrix.platform == 'macos-arm' && 'arm64'
-          }}
+            matrix.platform == 'macos-arm' && 'clang_arm64' }}
 
       - name: Prepare Linux ARM Toolchain
         if: matrix.platform == 'linux-arm'
         run: |
           sudo apt-get update
           sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+          sudo apt-get install -y --no-install-recommends qemu-user-static
 
       - name: Configure and Build
         run: |
           qmake Scrcpy-Sidebar.pro
-          if [[ "${{ matrix.platform }}" =~ "windows" ]]; then
-            nmake release
-          elif [[ "${{ matrix.platform }}" == "linux-arm" ]]; then
-            make -j2 CC=aarch64-linux-gnu-gcc CXX=aarch64-linux-gnu-g++
-          else
-            make -j2
-          fi
+          case "${{ matrix.platform }}" in
+            windows*)
+              nmake Release || jom Release
+              ;;
+            linux-arm)
+              export SYSROOT=/usr/aarch64-linux-gnu
+              make -j2 CC=aarch64-linux-gnu-gcc CXX=aarch64-linux-gnu-g++ \
+                   CFLAGS="--sysroot=$SYSROOT" CXXFLAGS="--sysroot=$SYSROOT"
+              ;;
+            *)
+              make -j2
+              ;;
+          esac
 
       - name: Package Artifacts
         run: |
           mkdir -p dist
           if [[ "${{ matrix.platform }}" =~ "windows" ]]; then
-            cp release/*.exe dist/
+            cp release/Scrcpy-Sidebar.exe dist/
           else
             cp Scrcpy-Sidebar dist/
           fi
@@ -85,4 +91,4 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: ${{ matrix.platform }}-build
-          path: dist/*
+          path: dist/
