@@ -5,6 +5,8 @@ English(Current) | [中文帮助](README_zh.md)
 
 <img width="960" height="476" alt="{CAB404BA-A61F-41F2-927D-6A540DBADB36}" src="https://github.com/user-attachments/assets/c0a94813-3de1-4cec-abfc-e94322254405" />
 
+[demo video on Bilibili](https://www.bilibili.com/video/BV1cibXz6E3M)
+
 **Enhance your scrcpy experience with audio forwarding and virtual buttons!**
 
 ## ✨ Features
@@ -68,7 +70,10 @@ English(Current) | [中文帮助](README_zh.md)
 ```bash
     vlc -Idummy --demux rawaud --network-caching=0 --play-and-exit tcl://localhost:28200   #if you havn't changed the port number
 ``` 
-See [Sndcpy](https://github.com/rom1v/sndcpy?tab=readme-ov-file#requirements) for details
+See [Sndcpy](https://github.com/rom1v/sndcpy?tab=readme-ov-file#requirements) for details  
+
+- Scrcpy might freeze if operating too fast connecting sndcpy. This is cause by the lack of mutex lock.
+- Scrcpy might ignore some operations if too fast. This is caused by single-instanced ExternalProcess.
 
 ## 📄 License
 LGPL-3.0 | © Command_Prompt
