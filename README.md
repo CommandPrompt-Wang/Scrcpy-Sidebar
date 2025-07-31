@@ -72,9 +72,6 @@ English(Current) | [中文帮助](README_zh.md)
 ``` 
 See [Sndcpy](https://github.com/rom1v/sndcpy?tab=readme-ov-file#requirements) for details  
 
-- If the operation is too fast (mainly connecting to the sndcpy service), Scrcpy-Sidebar will freeze. That's because I didn't write a mutex.
-- If the operation is too fast, Scrcpy-Sidebar ignores certain operations (although the UI seems to accept them). Because'Eneternal Process' I wrote is a singleton.
-- I will solve the above bugs as soon as possible.
 
 ## 📄 License
 LGPL-3.0 | © Command_Prompt
