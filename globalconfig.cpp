@@ -1,5 +1,8 @@
 #include "globalconfig.h"
 
+//at main.cpp
+extern void loadTranslation(const QString& langCode);
+
 GlobalConfig::GlobalConfig(QObject* parent) : QObject(parent) {
     // 确定配置文件路径
     QString appDataDir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
@@ -27,12 +30,12 @@ bool GlobalConfig::loadConfigFromText(QString configText)
     QJsonParseError parseError;
     QJsonDocument tempDoc = QJsonDocument::fromJson(configText.toUtf8(), &parseError);
     if (tempDoc.isNull() || !tempDoc.isObject()) {
-        qDebug() << "JSON解析错误:" << parseError.errorString();
+        qDebug() << tr("JSON解析错误:") << parseError.errorString();
         return false;
     }
 
     // 定义允许的字段及其默认值
-    const QStringList allowedFields = {"adbPath", "deviceSerial", "sndcpyApkPath", "sndcpyPort", "note", "wndInfoOfAdvancedKeyboard"};
+    const QStringList allowedFields = {"adbPath", "deviceSerial", "sndcpyApkPath", "sndcpyPort", "note", "wndInfoOfAdvancedKeyboard", "language"};
     const QStringList allowedKeyboardFields = {"buttons", "height", "width"};
 
     QJsonObject defaultLayout{{"width", 800}, {"height", 80}};
@@ -41,8 +44,9 @@ bool GlobalConfig::loadConfigFromText(QString configText)
         {"sndcpyApkPath", "sndcpy.apk"},
         {"sndcpyPort", 28200},
         {"deviceSerial", ""},
-        {"note", "此配置不会实时刷新。请尽量从GUI更改配置，不合适的修改可能导致错误。"},
-        {"wndInfoOfAdvancedKeyboard", defaultLayout}
+        {"note", tr("此配置不会实时刷新。请尽量从GUI更改配置，不合适的修改可能导致错误。/This configuration will not be refreshed in real-time. Please try to make configuration changes through the GUI, as inappropriate modifications may lead to errors.")},
+        {"wndInfoOfAdvancedKeyboard", defaultLayout},
+        {"language", "zh_CN"}
     };
 
     // 过滤并处理配置
@@ -120,6 +124,7 @@ bool GlobalConfig::saveConfig() {
     normalizePath();
     file.write(m_jsonDoc.toJson());
     qDebug()<<m_jsonDoc<<'\n';
+    loadTranslation(m_jsonDoc["language"].toString());
     return true;
 }
 
@@ -194,7 +199,7 @@ void GlobalConfig::initDefaultConfig() {
     obj["sndcpyApkPath"] = "sndcpy.apk";
     obj["sndcpyPort"] = 28200;
     obj["deviceSerial"] = "";
-    obj["note"] = "此配置不会实时刷新。请尽量从GUI更改配置，不合适的修改可能导致错误。";
+    obj["note"] = tr("此配置不会实时刷新。请尽量从GUI更改配置，不合适的修改可能导致错误。/This configuration will not be refreshed in real-time. Please try to make configuration changes through the GUI, as inappropriate modifications may lead to errors.");
     obj["wndInfoOfAdvancedKeyboard"] = layout;
     m_jsonDoc.setObject(obj);
 }
@@ -207,4 +212,8 @@ void GlobalConfig::setAdvancedKeyboardLayout(const QJsonObject& layout){
     QJsonObject obj = m_jsonDoc.object();
     obj["wndInfoOfAdvancedKeyboard"] = layout;
     m_jsonDoc.setObject(obj);
+}
+
+QString GlobalConfig::language() const{
+    return m_jsonDoc["language"].toString();
 }

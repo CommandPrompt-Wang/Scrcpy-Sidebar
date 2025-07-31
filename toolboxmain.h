@@ -4,6 +4,7 @@
 #pragma once
 
 #include <QWidget>
+#include <QEvent>
 #include <globalconfig.h>
 #include <externalprocess.h>
 #include <QPushButton>
@@ -76,7 +77,7 @@ signals:
 private:
     Ui::ToolboxMain *ui;
     GlobalConfig* conf;
-    ExternalProcess* proc;
+    // ExternalProcess* proc;
     QHash<QPushButton*, QString> buttonKeyMap;
     QSystemTrayIcon *tray;
     QTimer *longPressTimer;                  // 长按检测计时器
@@ -96,6 +97,8 @@ private:
                       std::function<void(const QString&)> callback);
     void handleStayOnSetting(Qt::CheckState state);
     void handleScreenOffTimeout(Qt::CheckState state);
+
+    void changeEvent(QEvent *event) override;
 
     SettingsWindow *settingsWnd;
     AdvancedKeyboard *advBrd;

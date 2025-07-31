@@ -2,6 +2,7 @@
 #define SETTINGSWINDOW_H
 
 #include <QWidget>
+#include <QEvent>
 #include <QStringList>
 #include <externalprocess.h>
 #include <globalconfig.h>
@@ -48,6 +49,8 @@ private slots:
     void on_btClose_clicked();
     void on_btReloadConfig_clicked();
     void on_btInstallSndcpy_clicked();
+
+    void changeEvent(QEvent *event) override;
 };
 
 #endif // SETTINGSWINDOW_H

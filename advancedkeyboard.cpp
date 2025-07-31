@@ -29,6 +29,12 @@ AdvancedKeyboard::AdvancedKeyboard(GlobalConfig* config, QWidget *parent)
     updateButtonLayout();
 }
 
+void AdvancedKeyboard::changeEvent(QEvent *event){
+    if (event->type() == QEvent::LanguageChange) {
+        ui->retranslateUi(this);  // 自动更新所有文本！
+    }
+}
+
 void AdvancedKeyboard::updateButtonLayout()
 {
     // 清除现有按钮

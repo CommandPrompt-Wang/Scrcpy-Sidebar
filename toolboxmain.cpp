@@ -1,6 +1,9 @@
 #include "toolboxmain.h"
 #include "ui_toolboxmain.h"
 
+// 在 main.cpp
+extern void loadTranslation(const QString& langCode);
+
 ToolboxMain::ToolboxMain(QWidget *parent)
     : QWidget(parent)
     , ui(new Ui::ToolboxMain)
@@ -15,12 +18,16 @@ ToolboxMain::ToolboxMain(QWidget *parent)
 
     conf = new GlobalConfig;
     conf->loadConfig();
-    proc = new ExternalProcess(this);
     tray = new QSystemTrayIcon(this->style()->standardIcon(QStyle::SP_MessageBoxInformation) ,this);
     tray->show();
     audioSink = nullptr;
     audioSocket = nullptr;
 
+    loadTranslation(conf->language());
+    qDebug() <<"detected"<<conf->language()<<"@start";
+
+    ExternalProcess* proc;
+    proc = new ExternalProcess(this);
     connect(proc, &ExternalProcess::finished, this, &ToolboxMain::handleError);
 
     proc->set(conf->adbPath(),QStringList("devices"),this);
@@ -98,6 +105,12 @@ ToolboxMain::ToolboxMain(QWidget *parent)
     initDeviceSettings();
 }
 
+void ToolboxMain::changeEvent(QEvent *event) {
+    if (event->type() == QEvent::LanguageChange) {
+        ui->retranslateUi(this);  // 自动更新所有文本！
+    }
+}
+
 void ToolboxMain::initDeviceSettings()
 {
     // 获取屏幕常亮设置
@@ -126,6 +139,10 @@ void ToolboxMain::handleLongPress(){
 
 void ToolboxMain::sendAdbKey(const QString &keyevent, bool isLongPress = false)
 {
+    ExternalProcess* proc;
+    proc = new ExternalProcess(this);
+    connect(proc, &ExternalProcess::finished, this, &ToolboxMain::handleError);
+
     QString adb = conf->adbPath();
 
     // proc->set(adb, QStringList({conf->deviceSerial(), "shell", "input", "keyevent", keyevent}), this);
@@ -159,29 +176,33 @@ void ToolboxMain::handleError(int exitCode, QProcess::ExitStatus exitStatus, con
 
         // 定义错误模式和对应消息的映射
         static const QMap<QString, QString> errorMessages = {
-            {"no devices/emulators found", "未找到可用的设备"},
-            {"error: more than one device and emulator", "你连接了多个设备，请在设置⚙里指定设备序列号"},
-            {"error: device offline", "设备离线"},
-            {"Error: No UID for com.rom1v.sndcpy", "你的设备还没有安装sndcpy.apk。请在设置里手动安装。"}
+            {"no devices/emulators found", tr("未找到可用的设备")},
+            {"error: more than one device and emulator", tr("你连接了多个设备，请在设置⚙里指定设备序列号")},
+            {"error: device offline", tr("设备离线")},
+            {"Error: No UID for com.rom1v.sndcpy", tr("你的设备还没有安装sndcpy.apk。请在设置里手动安装。")}
         };
 
         bool hasKnownError = false;
         for (auto it = errorMessages.constBegin(); it != errorMessages.constEnd(); ++it) {
             if (output.contains(it.key())) {
-                tray->showMessage("错误", it.value(), QSystemTrayIcon::Critical, 3000);
+                tray->showMessage(tr("错误"), it.value(), QSystemTrayIcon::Critical, 3000);
                 hasKnownError = true;
             }
         }
 
-        // 如果没有匹配到已知错误，但输出中包含"error"或"Error"，则显示原始错误信息
+        // 如果没有匹配到已知错误，但输出中包含"errortr("或")Error"，则显示原始错误信息
         if (!hasKnownError && (output.contains("error") || output.contains("Error"))) {
-            tray->showMessage("错误", output, QSystemTrayIcon::Critical, 3000);
+            tray->showMessage(tr("错误"), output, QSystemTrayIcon::Critical, 3000);
         }
     }
 }
 
 void ToolboxMain::on_ckUseSndcpy_checkStateChanged(const Qt::CheckState &arg1)
 {
+    ExternalProcess* proc;
+    proc = new ExternalProcess(this);
+    connect(proc, &ExternalProcess::finished, this, &ToolboxMain::handleError);
+
     QString adb = conf->adbPath();
     QStringList args;
     if (!conf->deviceSerial().isEmpty()) {
@@ -190,6 +211,9 @@ void ToolboxMain::on_ckUseSndcpy_checkStateChanged(const Qt::CheckState &arg1)
 
     if(arg1 == Qt::Checked)
     {
+        // 防止锁死，在setupAudioPlayback解封
+        ui->ckUseSndcpy->setDisabled(true);
+
         bool success = true;
         // 1. 授权
         QStringList argt = args;
@@ -214,12 +238,15 @@ void ToolboxMain::on_ckUseSndcpy_checkStateChanged(const Qt::CheckState &arg1)
         success &= proc->run(true);
 
         if(!success) {
-            tray->showMessage("错误", "未能启动sndcpy，请检查先前的错误消息！");
+            tray->showMessage(tr("错误"), tr("未能启动sndcpy，请检查先前的错误消息！"));
+            ui->ckUseSndcpy->setDisabled(false);
+            ui->ckUseSndcpy->setChecked(false);
             return;
         }
 
         // 4. 设置音频播放
         setupAudioPlayback();
+        // ui->ckUseSndcpy->setDisabled(false);
     }
     else
     {
@@ -256,14 +283,17 @@ void ToolboxMain::setupAudioPlayback()
     QTimer *retryTimer = new QTimer(this);
     retryTimer->setSingleShot(true);
 
-    auto tryConnect = [this, retryTimer, maxRetries]() {
+    auto tryConnect = [this, retryTimer]() {
         if (this->audioConnectRetries >= maxRetries) {
-            tray->showMessage("错误", "无法连接到音频流，已达到最大重试次数");
+            tray->showMessage(tr("错误"), tr("无法连接到音频流，已达到最大重试次数"));
             retryTimer->deleteLater();
+
+            // 解封
+            ui->ckUseSndcpy->setDisabled(false);
             return;
         }
 
-        qDebug() << "尝试连接音频流，重试次数:" << this->audioConnectRetries;
+        qDebug() << tr("尝试连接音频流，重试次数:") << this->audioConnectRetries;
         audioSocket->connectToHost("127.0.0.1", conf->sndcpyPort());
         this->audioConnectRetries++;
     };
@@ -271,7 +301,7 @@ void ToolboxMain::setupAudioPlayback()
     connect(retryTimer, &QTimer::timeout, this, tryConnect);
 
     connect(audioSocket, &QTcpSocket::connected, this, [this, retryTimer]() {
-        qDebug() << "成功连接到音频流";
+        qDebug() << tr("成功连接到音频流");
         retryTimer->deleteLater();
 
         // 设置音频输出格式 (使用48000Hz匹配sndcpy默认设置)
@@ -282,33 +312,36 @@ void ToolboxMain::setupAudioPlayback()
 
         QAudioDevice device = QMediaDevices::defaultAudioOutput();
         if(!device.isFormatSupported(format)) {
-            qDebug() << "默认格式不支持，尝试使用首选格式";
+            qDebug() << tr("默认格式不支持，尝试使用首选格式");
             format = device.preferredFormat();
         }
 
-        qDebug() << "使用的音频格式:"
-                 << "采样率:" << format.sampleRate()
-                 << "声道数:" << format.channelCount()
-                 << "采样格式:" << format.sampleFormat();
+        qDebug() << tr("使用的音频格式:")
+                 << tr("采样率:") << format.sampleRate()
+                 << tr("声道数:") << format.channelCount()
+                 << tr("采样格式:") << format.sampleFormat();
 
         audioSink = new QAudioSink(device, format, this);
         audioOutput = audioSink->start();
 
-        // 关键：连接数据接收信号
         connect(audioSocket, &QTcpSocket::readyRead, this, [this]() {
             QByteArray data = audioSocket->readAll();
             if (audioOutput && audioOutput->isOpen()) {
                 audioOutput->write(data);
-                // qDebug() << "写入音频数据大小:" << data.size() << "字节";
+                // qDebug() << tr("写入音频数据大小:") << data.size() << tr("字节");
             }
         });
+        // 解封
+        ui->ckUseSndcpy->setDisabled(false);
     });
 
     connect(audioSocket, &QTcpSocket::errorOccurred, this, [this, retryTimer](QAbstractSocket::SocketError error) {
         if (retryTimer->isActive()) return;
 
-        qDebug() << "音频流连接错误:" << error << audioSocket->errorString();
-        tray->showMessage("错误", "音频流连接错误: " + audioSocket->errorString());
+        qDebug() << tr("音频流连接错误:") << error << audioSocket->errorString();
+        tray->showMessage(tr("错误"), tr("音频流连接错误:") + audioSocket->errorString());
+        // 解封
+        ui->ckUseSndcpy->setDisabled(false);
     });
 
     // 首次延迟500ms后尝试连接
@@ -326,10 +359,15 @@ void ToolboxMain::on_btKillADBonExit_checkStateChanged(const Qt::CheckState &arg
 
 void ToolboxMain::closeEvent(QCloseEvent *event) {
 
-    disconnect(proc, &ExternalProcess::finished, nullptr, nullptr);
+    // disconnect(proc, &ExternalProcess::finished, nullptr, nullptr);
+
+    ExternalProcess* proc;
+    proc = new ExternalProcess(this);
+    // connect(proc, &ExternalProcess::finished, this, &ToolboxMain::handleError);
+
 
     // 创建全模态进度对话框
-    QProgressDialog progress("正在关闭程序...", QString(), 0, 5, this);
+    QProgressDialog progress(tr("正在关闭程序..."), QString(), 0, 5, this);
     progress.setWindowModality(Qt::WindowModal);
     progress.setCancelButton(nullptr); // 隐藏取消按钮
     progress.setWindowFlags(Qt::Dialog | Qt::WindowStaysOnTopHint);
@@ -350,7 +388,7 @@ void ToolboxMain::closeEvent(QCloseEvent *event) {
     progress.setValue(1);
 
     // 1. 保存配置
-    progress.setLabelText("正在保存配置文件...");
+    progress.setLabelText(tr("正在保存配置文件..."));
     qDebug() << "saving config...";
     if (!conf->saveConfig()) {
         qWarning() << "Failed to save config!";
@@ -361,18 +399,21 @@ void ToolboxMain::closeEvent(QCloseEvent *event) {
     QString adb = conf->adbPath();
 
     // 2. 停止sndcpy应用
-    progress.setLabelText("正在停止sndcpy应用...");
-    QStringList stopArgs;
-    stopArgs << "shell" << "am" << "force-stop" << "com.rom1v.sndcpy";
-    proc->set(adb, stopArgs, this);
-    qDebug() << "stopping sndcpy...";
-    proc->run(true);  // 阻塞执行
+    if(ui->ckUseSndcpy->isChecked())
+    {
+        progress.setLabelText(tr("正在停止sndcpy应用..."));
+        QStringList stopArgs;
+        stopArgs << "shell" << "am" << "force-stop" << "com.rom1v.sndcpy";
+        proc->set(adb, stopArgs, this);
+        qDebug() << "stopping sndcpy...";
+        proc->run(true);  // 阻塞执行
+    }
     progress.setValue(3);
     QCoreApplication::processEvents();
 
     // 3. 杀死ADB服务
     if(bKillADBonExit) {
-        progress.setLabelText("正在停止ADB服务...");
+        progress.setLabelText(tr("正在停止ADB服务..."));
         qDebug() << "killing adb...";
         proc->set(adb, QStringList({"kill-server"}), this);
         proc->run(true);
@@ -397,7 +438,7 @@ void ToolboxMain::closeEvent(QCloseEvent *event) {
     progress.setValue(4);
 
     // 完成提示
-    progress.setLabelText("完成");
+    progress.setLabelText(tr("完成"));
     QThread::msleep(200);
     progress.close();
 
@@ -511,6 +552,10 @@ void ToolboxMain::fetchSetting(const QString& settingNamespace,
                                const QString& settingName,
                                std::function<void(const QString&)> callback)
 {
+    ExternalProcess* proc;
+    proc = new ExternalProcess(this);
+    connect(proc, &ExternalProcess::finished, this, &ToolboxMain::handleError);
+
     QString adb = conf->adbPath();
     QStringList args;
     if (!conf->deviceSerial().isEmpty()) {
@@ -521,7 +566,7 @@ void ToolboxMain::fetchSetting(const QString& settingNamespace,
 
     auto *connection = new QMetaObject::Connection;
     *connection = connect(proc, &ExternalProcess::finished,
-                          [this, connection, callback](int exitCode, QProcess::ExitStatus exitStatus, const QString& output) {
+                          [connection, callback](int exitCode, QProcess::ExitStatus exitStatus, const QString& output) {
                               disconnect(*connection);
                               delete connection;
 
@@ -533,7 +578,7 @@ void ToolboxMain::fetchSetting(const QString& settingNamespace,
                           });
 
     proc->set(adb, args, this);
-    proc->run(true);
+    proc->run();
 }
 
 void ToolboxMain::on_ckNeverLock_checkStateChanged(const Qt::CheckState &arg1)
@@ -543,6 +588,10 @@ void ToolboxMain::on_ckNeverLock_checkStateChanged(const Qt::CheckState &arg1)
 
 void ToolboxMain::handleStayOnSetting(Qt::CheckState state)
 {
+    ExternalProcess* proc;
+    proc = new ExternalProcess(this);
+    connect(proc, &ExternalProcess::finished, this, &ToolboxMain::handleError);
+
     QString adb = conf->adbPath();
     QStringList args;
     if (!conf->deviceSerial().isEmpty()) {
@@ -559,9 +608,7 @@ void ToolboxMain::handleStayOnSetting(Qt::CheckState state)
 
     proc->set(adb, args, this);
     if (!proc->run(true)) {
-        tray->showMessage("错误", state == Qt::Checked ? "启用屏幕常亮失败" : "恢复屏幕设置失败");
-        // 恢复UI状态
-        ui->ckNeverLock->setCheckState(state == Qt::Checked ? Qt::Unchecked : Qt::Checked);
+        tray->showMessage(tr("错误"), state == Qt::Checked ? tr("启用屏幕常亮失败") : tr("恢复屏幕设置失败"));
     }
 }
 
@@ -572,6 +619,10 @@ void ToolboxMain::on_ckScreenOffTimeout_checkStateChanged(const Qt::CheckState &
 
 void ToolboxMain::handleScreenOffTimeout(Qt::CheckState state)
 {
+    ExternalProcess* proc;
+    proc = new ExternalProcess(this);
+    connect(proc, &ExternalProcess::finished, this, &ToolboxMain::handleError);
+
     QString adb = conf->adbPath();
     QStringList args;
     if (!conf->deviceSerial().isEmpty()) {
@@ -589,9 +640,7 @@ void ToolboxMain::handleScreenOffTimeout(Qt::CheckState state)
 
     proc->set(adb, args, this);
     if (!proc->run(true)) {
-        tray->showMessage("错误", state == Qt::Checked ? "设置屏幕超时失败" : "恢复屏幕超时设置失败");
-        // 恢复UI状态
-        ui->ckScreenOffTimeout->setCheckState(state == Qt::Checked ? Qt::Unchecked : Qt::Checked);
+        tray->showMessage(tr("错误"), state == Qt::Checked ? tr("设置屏幕超时失败") : tr("恢复屏幕超时设置失败"));
     }
 }
 
@@ -620,7 +669,7 @@ void ToolboxMain::on_btAbout_clicked()
 
     // 构建关于文本内容
     QString aboutText =
-        "<h2 style='text-align:center;'>Scrcpy-Sidebar</h2>"
+     tr("<h2 style='text-align:center;'>Scrcpy-Sidebar</h2>"
         "<hr>"
         "<p><b>开发者:</b> Command_Prompt</p>"
         "<p><b>构建工具:</b> Qt 6.9.1 (LGPLv3)</p>"
@@ -629,45 +678,45 @@ void ToolboxMain::on_btAbout_clicked()
         "<ul>"
         "<li>Scrcpy扩展面板</li>"
         "<li>音量/电源键快捷操作</li>"
-        "<li>针对 api< 30的sndcpy音频转发支持(Android 10)</li>"
+        "<li>针对 api 29 的sndcpy音频转发支持(Android 10)</li>"
         "<li>可扩展的按键面板</li>"
         "</ul>"
         "<hr>"
         "<p style='color:red;'><b>注意:</b> 请尽量使用GUI修改设置，直接编辑配置文件可能不会立即生效或导致错误。</p>"
         "<hr>"
         "<h3>当前配置文件内容:</h3>"
-        "<pre>" + conf->getText().toHtmlEscaped() + "</pre>"
-                                            "<hr>"
-                                            "<h3>配置文件说明:</h3>"
-                                            "<ul>"
-                                            "<li><b>adbPath</b>: ADB工具路径</li>"
-                                            "<li><b>deviceSerial</b>: 设备序列号(多设备时使用)</li>"
-                                            "<li><b>sndcpyApkPath</b>: sndcpy应用路径</li>"
-                                            "<li><b>sndcpyPort</b>: 音频转发TCP端口(默认28200)</li>"
-                                            "<li><b>wndInfoOfAdvancedKeyboard</b>: 扩展按键面板设置</li>"
-                                            "</ul>"
-                                            "<h4>扩展按键面板配置说明:</h4>"
-                                            "<pre>"
-                                            "\"wndInfoOfAdvancedKeyboard\": {\n"
-                                            "    \"buttons\": {\n"
-                                            "        \"主页\": \"HOME\"  // 按钮显示名称+对应的键码\n"
-                                            "    },\n"
-                                            "    \"height\": 46,      // 扩展键盘高度(像素)\n"
-                                            "    \"width\": 178       // 扩展键盘宽度(像素)\n"
-                                            "}"
-                                            "</pre>"
-                                            "<p>配置说明：</p>"
-                                            "<ul>"
-                                            "<li><b>buttons</b>: 定义按键，键名为显示文本，键值为对应的Android键码</li>"
-                                            "<li><b>height/width</b>: 定义扩展键盘窗口的尺寸(单位:像素)</li>"
-                                            "<li>常用键码: HOME(主页), BACK(返回), VOLUME_UP(音量+), VOLUME_DOWN(音量-)</li>"
-                                            "</ul>";
+        "<pre>%1</pre>"
+        "<hr>"
+        "<h3>配置文件说明:</h3>"
+        "<ul>"
+        "<li><b>adbPath</b>: ADB工具路径</li>"
+        "<li><b>deviceSerial</b>: 设备序列号(多设备时使用)</li>"
+        "<li><b>sndcpyApkPath</b>: sndcpy应用路径</li>"
+        "<li><b>sndcpyPort</b>: 音频转发TCP端口(默认28200)</li>"
+        "<li><b>wndInfoOfAdvancedKeyboard</b>: 扩展按键面板设置</li>"
+        "</ul>"
+        "<h4>扩展按键面板配置说明:</h4>"
+        "<pre>"
+        "\"wndInfoOfAdvancedKeyboard\": {\n"
+        "    \"buttons\": {\n"
+        "        \"主页\": \"HOME\"  // 按钮显示名称+对应的键码\n"
+        "    },\n"
+        "    \"height\": 46,      // 扩展键盘高度(像素)\n"
+        "    \"width\": 178       // 扩展键盘宽度(像素)\n"
+        "}"
+        "</pre>"
+        "<p>配置说明：</p>"
+        "<ul>"
+        "<li><b>buttons</b>: 定义按键，键名为显示文本，键值为对应的Android键码</li>"
+        "<li><b>height/width</b>: 定义扩展键盘窗口的尺寸(单位:像素)</li>"
+        "<li>常用键码: HOME(主页), BACK(返回), VOLUME_UP(音量+), VOLUME_DOWN(音量-)</li>"
+        "</ul>").arg(conf->getText().toHtmlEscaped());
 
     textEdit->setHtml(aboutText);
     textEdit->moveCursor(QTextCursor::Start); // 滚动到顶部
 
     // 添加关闭按钮
-    QPushButton *closeButton = new QPushButton("关闭", aboutDialog);
+    QPushButton *closeButton = new QPushButton(tr("关闭"), aboutDialog);
     connect(closeButton, &QPushButton::clicked, aboutDialog, &QDialog::accept);
 
     // 布局设置

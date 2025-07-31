@@ -29,6 +29,12 @@ SettingsWindow::~SettingsWindow()
     delete ui;
 }
 
+void SettingsWindow::changeEvent(QEvent *event){
+    if (event->type() == QEvent::LanguageChange) {
+        ui->retranslateUi(this);  // 自动更新所有文本！
+    }
+}
+
 QString SettingsWindow::config() const
 {
     return ui->edConfig->toPlainText();

@@ -4,7 +4,9 @@
 #include <QObject>
 #include <QProcess>
 #include <QString>
+#ifdef Q_OS_WIN32
 #include <windows.h>
+#endif
 #include <QDebug>
 
 class ExternalProcess : public QObject
@@ -27,13 +29,13 @@ public:
             QString errorMsg;
             switch (process->error()) {
             case QProcess::FailedToStart:
-                errorMsg = QString("程序%1不存在或权限不足").arg(process->program());
+                errorMsg = QString(tr("程序%1不存在或权限不足")).arg(process->program());
                 break;
             case QProcess::Crashed:
-                errorMsg = QString("程序%1启动后崩溃").arg(process->program());
+                errorMsg = QString(tr("程序%1启动后崩溃")).arg(process->program());
                 break;
             default:
-                errorMsg = QString("未知错误:%1").arg(process->error());
+                errorMsg = QString(tr("未知错误:%1")).arg(process->error());
             }
             emit finished(-1, QProcess::CrashExit, errorMsg);  // 自定义错误码 -1
             return false;

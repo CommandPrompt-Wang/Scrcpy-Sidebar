@@ -2,6 +2,7 @@
 #define ADVANCEDKEYBOARD_H
 
 #include <QWidget>
+#include <QEvent>
 #include <QTimer>
 #include <QPushButton>
 #include <QJsonObject>
@@ -47,6 +48,8 @@ private:
     void sendAdbKey(const QString &keyevent, bool isLongPress = false);
     void saveCurrentLayout();
     bool validateKeyCode(const QString &key);
+
+    void changeEvent(QEvent *event) override;
 
     Ui::AdvancedKeyboard *ui;
     QPoint m_lastPos;

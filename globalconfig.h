@@ -40,6 +40,8 @@ public:
     QJsonObject advancedKeyboardLayout();
     void setAdvancedKeyboardLayout(const QJsonObject& layout);
 
+    QString language() const;
+
     QString getText(){
         return QString::fromUtf8(m_jsonDoc.toJson());
     }
