@@ -3,7 +3,7 @@
 [English](README.md) | 中文(当前)
 
 <img width="960" height="476" alt="{CAB404BA-A61F-41F2-927D-6A540DBADB36}" src="https://github.com/user-attachments/assets/c0a94813-3de1-4cec-abfc-e94322254405" />
-[实机演示](https://www.bilibili.com/video/BV1cibXz6E3M)
+[实机演示](https://www.bilibili.com/video/BV1q1tGzEE5d)
 
 **为 scrcpy 添加音频转发和虚拟按键功能！**
 
