@@ -5,7 +5,7 @@ English(Current) | [中文帮助](README_zh.md)
 
 <img width="960" height="476" alt="{CAB404BA-A61F-41F2-927D-6A540DBADB36}" src="https://github.com/user-attachments/assets/c0a94813-3de1-4cec-abfc-e94322254405" />
 
-[demo video on Bilibili](https://www.bilibili.com/video/BV1cibXz6E3M)
+[demo video on Bilibili](https://www.bilibili.com/video/BV1q1tGzEE5d)
 
 **Enhance your scrcpy experience with audio forwarding and virtual buttons!**
 
