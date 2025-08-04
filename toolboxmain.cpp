@@ -245,7 +245,7 @@ void ToolboxMain::on_ckUseSndcpy_checkStateChanged(const Qt::CheckState &arg1)
         }
 
         // 4. 设置音频播放
-        setupAudioPlayback();
+        QTimer::singleShot(2000, this, &ToolboxMain::setupAudioPlayback);
         // ui->ckUseSndcpy->setDisabled(false);
     }
     else
@@ -277,7 +277,6 @@ void ToolboxMain::setupAudioPlayback()
     // 使用成员变量记录重试次数
     audioConnectRetries = 0;
     const int maxRetries = 3;
-    const int retryInterval = 500; // 500ms
 
     // 使用局部QTimer实现延迟重试
     QTimer *retryTimer = new QTimer(this);
@@ -302,11 +301,12 @@ void ToolboxMain::setupAudioPlayback()
 
     connect(audioSocket, &QTcpSocket::connected, this, [this, retryTimer]() {
         qDebug() << tr("成功连接到音频流");
+        audioConnectRetries = 0;
         retryTimer->deleteLater();
 
         // 设置音频输出格式 (使用48000Hz匹配sndcpy默认设置)
         QAudioFormat format;
-        format.setSampleRate(48000);  // 改为48000
+        format.setSampleRate(48000);
         format.setChannelCount(2);
         format.setSampleFormat(QAudioFormat::Int16);
 
@@ -335,17 +335,13 @@ void ToolboxMain::setupAudioPlayback()
         ui->ckUseSndcpy->setDisabled(false);
     });
 
-    connect(audioSocket, &QTcpSocket::errorOccurred, this, [this, retryTimer](QAbstractSocket::SocketError error) {
-        if (retryTimer->isActive()) return;
-
+    connect(audioSocket, &QTcpSocket::errorOccurred, this, [this](QAbstractSocket::SocketError error) {
         qDebug() << tr("音频流连接错误:") << error << audioSocket->errorString();
         tray->showMessage(tr("错误"), tr("音频流连接错误:") + audioSocket->errorString());
-        // 解封
-        ui->ckUseSndcpy->setDisabled(false);
     });
 
-    // 首次延迟500ms后尝试连接
-    retryTimer->start(retryInterval);
+    // 首次立即尝试连接
+    tryConnect();
 }
 
 void ToolboxMain::on_btKillADBonExit_checkStateChanged(const Qt::CheckState &arg1)
