@@ -89,15 +89,30 @@ void SettingsWindow::on_btReloadConfig_clicked()
 
 void SettingsWindow::on_btInstallSndcpy_clicked()
 {
-    QString sndcpy = conf->sndcpyApkPath() + "sndcpy.apk";
+    QString sndcpy = conf->sndcpyApkPath();
 
     QStringList args;
     if (!conf->deviceSerial().isEmpty()) {
         args << conf->deviceSerial();  // 只在有设备号时添加
     }
     args << "install" << sndcpy;
+    emit sendTrayMessage(tr("正在开始安装。请等待..."));
 
-    proc->set(conf->adbPath(), args, this);
-    proc->run();
+    ExternalProcess *p;
+    p = new ExternalProcess(this);
+
+    p->set(conf->adbPath(), args, this);
+    p->run();
+
+    connect(p, &ExternalProcess::finished, this,
+            [this](int exitCode, QProcess::ExitStatus exitStatus, const QString &output){
+        if(exitCode != 0){
+            emit sendTrayMessage(tr("安装失败%1：%2").arg(exitCode).arg(output));
+        }
+        else
+        {
+            emit sendTrayMessage(tr("安装成功。"));
+        }
+    });
 }
 

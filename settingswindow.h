@@ -31,6 +31,7 @@ signals:
     void configRequested();
     void configSaved(QString);
     void settingProcessFinished(int exitCode, QProcess::ExitStatus exitStatus, const QString &output);
+    void sendTrayMessage(QString);
 
 protected:
     void closeEvent(QCloseEvent *event) override;

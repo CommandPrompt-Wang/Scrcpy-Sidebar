@@ -84,6 +84,10 @@ ToolboxMain::ToolboxMain(QWidget *parent)
             [this](int exitCode, QProcess::ExitStatus exitStatus, const QString &output){
         handleError(exitCode, exitStatus, output);
     });
+    connect(settingsWnd, &SettingsWindow::sendTrayMessage, this,
+            [this](QString message) {
+                tray->showMessage(tr("提示"),message);
+    });
     // connect(settingsWnd, &SettingsWindow::configRequested, this, [this](){
     //     emit sendConfig(conf->getText());
     // });
@@ -662,6 +666,7 @@ void ToolboxMain::on_btAbout_clicked()
     QTextEdit *textEdit = new QTextEdit(aboutDialog);
     textEdit->setReadOnly(true);
     textEdit->setTextInteractionFlags(Qt::TextSelectableByMouse); // 允许选择文本
+    textEdit->setWordWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);
 
     // 构建关于文本内容
     QString aboutText =
@@ -681,16 +686,17 @@ void ToolboxMain::on_btAbout_clicked()
         "<p style='color:red;'><b>注意:</b> 请尽量使用GUI修改设置，直接编辑配置文件可能不会立即生效或导致错误。</p>"
         "<hr>"
         "<h3>当前配置文件内容:</h3>"
-        "<pre>%1</pre>"
+        "<pre style='white-space: pre-wrap;'>%1</pre>"
         "<hr>"
         "<h3>配置文件说明:</h3>"
         "<ul>"
         "<li><b>adbPath</b>: ADB工具路径</li>"
         "<li><b>deviceSerial</b>: 设备序列号(多设备时使用)</li>"
-        "<li><b>sndcpyApkPath</b>: sndcpy应用路径</li>"
+        "<li><b>sndcpyApkPath</b>: sndcpy.apk路径</li>"
         "<li><b>sndcpyPort</b>: 音频转发TCP端口(默认28200)</li>"
         "<li><b>wndInfoOfAdvancedKeyboard</b>: 扩展按键面板设置</li>"
         "</ul>"
+        "<p>路径填写推荐使用正斜杠/，可以但不推荐\\\\；单斜杠\\无效。</p>"
         "<h4>扩展按键面板配置说明:</h4>"
         "<pre>"
         "\"wndInfoOfAdvancedKeyboard\": {\n"
